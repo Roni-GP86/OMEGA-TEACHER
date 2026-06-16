@@ -5,7 +5,20 @@ import { GoogleGenAI } from "@google/genai";
 import dotenv from "dotenv";
 import { PDFDocument } from "pdf-lib";
 
+import { fileURLToPath } from "url";
+
 dotenv.config();
+
+const _filename = typeof __filename !== "undefined" ? __filename : fileURLToPath(import.meta.url);
+const _dirname = typeof __dirname !== "undefined" ? __dirname : path.dirname(_filename);
+
+// Auto-enforce production mode if running from the compiled server bundle to prevent dev/watch crashes on Cloud Run
+if (
+  process.env.NODE_ENV !== "production" &&
+  (_filename.endsWith("server.cjs") || _filename.includes("dist"))
+) {
+  process.env.NODE_ENV = "production";
+}
 
 let aiInstance: GoogleGenAI | null = null;
 
@@ -319,7 +332,7 @@ async function generateContentWithRetry(params: GenerateContentWithRetryParams, 
 
 async function startServer() {
   const app = express();
-  const PORT = 3000;
+  const PORT = process.env.PORT || 3000;
 
   // Set high file body limits since uploaded PDFs can be large
   app.use(express.json({ limit: "50mb" }));
@@ -1681,16 +1694,9 @@ RESPON WAJIB BERUPA BLOK JSON DENGAN KEY BERIKUT (Dilarang ada penjelasan teks a
     app.use(vite.middlewares);
   } else {
     // Dynamically resolve static files folder in production
-    let distPath = path.join(process.cwd(), "dist");
-    
-    // If we're executing directly inside dist/ (due to bundled location 'dist/server.cjs')
-    if (path.basename(__dirname) === "dist") {
-      distPath = __dirname;
-    } else if (__dirname && path.basename(__dirname) !== "dist") {
-      const alternateDist = path.join(__dirname, "dist");
-      distPath = alternateDist;
-    }
+    const distPath = path.resolve(process.cwd(), "dist");
 
+    console.log(`[Production Static Serving] Current working directory: ${process.cwd()}`);
     console.log(`[Production Static Serving] Selected static folder path: ${distPath}`);
     app.use(express.static(distPath));
     

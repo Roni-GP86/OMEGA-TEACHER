@@ -1513,7 +1513,7 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-[#030409] via-[#020204] to-[#000000] text-zinc-100 antialiased font-sans flex relative selection:bg-amber-400 selection:text-black">
+    <div className="min-h-screen min-h-svh bg-gradient-to-b from-[#030409] via-[#020204] to-[#000000] text-zinc-100 antialiased font-sans flex relative selection:bg-amber-400 selection:text-black">
       
       {/* SATISFYING TOAST NOTIFICATION FOR API KEY OPERATION */}
       {keySaveNotification && (
@@ -1567,9 +1567,20 @@ export default function App() {
       <aside 
         id="side-navigation"
         className={`
-          fixed lg:sticky top-0 z-50 h-screen transition-all duration-300 ease-in-out flex flex-col bg-[#07070a] overflow-y-auto shrink-0
-          ${sidebarOpen ? 'w-64 border-r border-zinc-900/80 translate-x-0 opacity-100' : 'w-0 border-r-0 -translate-x-full opacity-0 pointer-events-none overflow-hidden'}
-          ${mobileSidebarOpen ? 'translate-x-0 w-64 border-r border-zinc-900/80 opacity-100 pointer-events-auto' : ''}
+          fixed lg:sticky top-0 z-50 h-svh lg:h-screen transition-all duration-300 ease-in-out flex flex-col bg-[#07070a] overflow-y-auto shrink-0
+          
+          /* Mobile styles (by default) */
+          ${mobileSidebarOpen 
+            ? 'w-64 translate-x-0 opacity-100 pointer-events-auto border-r border-zinc-900/80' 
+            : 'w-0 -translate-x-full opacity-0 pointer-events-none overflow-hidden border-r-0'
+          }
+          
+          /* Desktop overrides (prefixed with lg:) */
+          lg:translate-x-0 lg:opacity-100 lg:pointer-events-auto lg:h-screen
+          ${sidebarOpen 
+            ? 'lg:w-64 lg:border-r lg:border-zinc-900/80' 
+            : 'lg:w-0 lg:border-r-0 lg:overflow-hidden lg:pointer-events-none lg:opacity-0'
+          }
         `}
       >
         {/* LOGO AREA */}
@@ -2023,7 +2034,7 @@ export default function App() {
       </aside>
 
       {/* RIGHT MAIN CONTENT CONTAINER */}
-      <main className="flex-1 min-h-screen flex flex-col justify-between overflow-x-hidden">
+      <main className="flex-1 min-h-screen min-h-svh flex flex-col justify-between overflow-x-hidden">
         
         {/* TOP GLORIOUS APP HEADER & STATUS BAR */}
         <header className="sticky top-0 z-30 bg-[#0e1233]/70 backdrop-blur-md border-b border-indigo-950/60 p-4 shrink-0">
@@ -2033,8 +2044,11 @@ export default function App() {
             <div className="flex items-center gap-3">
               <button
                 onClick={() => {
-                  setSidebarOpen(!sidebarOpen);
-                  setMobileSidebarOpen(!mobileSidebarOpen);
+                  if (window.innerWidth >= 1024) {
+                    setSidebarOpen(!sidebarOpen);
+                  } else {
+                    setMobileSidebarOpen(!mobileSidebarOpen);
+                  }
                 }}
                 className="p-2.5 bg-[#0b0e25] border border-indigo-900/40 rounded-xl text-indigo-300 hover:text-white hover:bg-indigo-950 transition flex items-center justify-center cursor-pointer relative shrink-0"
                 id="sidebar-toggle-hamburger"
