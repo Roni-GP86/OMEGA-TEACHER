@@ -330,8 +330,18 @@ async function generateContentWithRetry(params: GenerateContentWithRetryParams, 
   }
 }
 
+let appInstance: express.Express | null = null;
+
+export async function getApp(): Promise<express.Express> {
+  if (!appInstance) {
+    await startServer();
+  }
+  return appInstance!;
+}
+
 async function startServer() {
   const app = express();
+  appInstance = app;
   const PORT = process.env.PORT || 3000;
 
   // Set high file body limits since uploaded PDFs can be large
@@ -1685,42 +1695,50 @@ RESPON WAJIB BERUPA BLOK JSON DENGAN KEY BERIKUT (Dilarang ada penjelasan teks a
     }
   });
 
-  // Serve static assets and Vite middleware
-  if (process.env.NODE_ENV !== "production") {
-    const vite = await createViteServer({
-      server: { middlewareMode: true },
-      appType: "spa",
-    });
-    app.use(vite.middlewares);
-  } else {
-    // Dynamically resolve static files folder in production
-    const distPath = path.resolve(process.cwd(), "dist");
+  const isNetlify = !!(process.env.NETLIFY || process.env.LAMBDA_TASK_ROOT || process.env.NETLIFY_DEV);
 
-    console.log(`[Production Static Serving] Current working directory: ${process.cwd()}`);
-    console.log(`[Production Static Serving] Selected static folder path: ${distPath}`);
-    app.use(express.static(distPath));
-    
-    app.get("*", (req, res) => {
-      const indexPath = path.join(distPath, "index.html");
-      res.sendFile(indexPath, (err) => {
-        if (err) {
-          console.error(`[Static File Error] Gagal memuat file utama dari ${indexPath}:`, err);
-          res.status(404).send(
-            "<h3>OMEGA TEACHER ENGINE - Error 404: Halaman Utama Tidak Ditemukan</h3>" +
-            "<p>Basis data web lokal berhasil dikompilasi, tetapi file pratinjau utama (index.html) " +
-            "tidak ditemukan di folder statis server. " +
-            "Silakan bangun ulang aplikasi Anda atau hubungi dukungan teknis.</p>"
-          );
-        }
+  if (!isNetlify) {
+    // Serve static assets and Vite middleware
+    if (process.env.NODE_ENV !== "production") {
+      const vite = await createViteServer({
+        server: { middlewareMode: true },
+        appType: "spa",
       });
+      app.use(vite.middlewares);
+    } else {
+      // Dynamically resolve static files folder in production
+      const distPath = path.resolve(process.cwd(), "dist");
+
+      console.log(`[Production Static Serving] Current working directory: ${process.cwd()}`);
+      console.log(`[Production Static Serving] Selected static folder path: ${distPath}`);
+      app.use(express.static(distPath));
+      
+      app.get("*", (req, res) => {
+        const indexPath = path.join(distPath, "index.html");
+        res.sendFile(indexPath, (err) => {
+          if (err) {
+            console.error(`[Static File Error] Gagal memuat file utama dari ${indexPath}:`, err);
+            res.status(404).send(
+              "<h3>OMEGA TEACHER ENGINE - Error 404: Halaman Utama Tidak Ditemukan</h3>" +
+              "<p>Basis data web lokal berhasil dikompilasi, tetapi file pratinjau utama (index.html) " +
+              "tidak ditemukan di folder statis server. " +
+              "Silakan bangun ulang aplikasi Anda atau hubungi dukungan teknis.</p>"
+            );
+          }
+        });
+      });
+    }
+
+    app.listen(PORT, "0.0.0.0", () => {
+      console.log(`Server running on http://localhost:${PORT}`);
     });
   }
-
-  app.listen(PORT, "0.0.0.0", () => {
-    console.log(`Server running on http://localhost:${PORT}`);
-  });
 }
 
-startServer().catch((err) => {
-  console.error("Failed to start server:", err);
-});
+const isNetlify = !!(process.env.NETLIFY || process.env.LAMBDA_TASK_ROOT || process.env.NETLIFY_DEV);
+
+if (!isNetlify) {
+  startServer().catch((err) => {
+    console.error("Failed to start server:", err);
+  });
+}
